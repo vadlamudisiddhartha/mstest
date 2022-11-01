@@ -1,0 +1,128 @@
+
+import com.adobe.cq.dam.cfm.ContentElement;
+import com.adobe.cq.dam.cfm.ContentFragment;
+
+import org.aarp.www.core.beans.ServiceUserConstants;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.*;
+import org.apache.sling.models.annotations.Default;
+import org.apache.sling.models.annotations.Model;
+import org.apache.sling.models.annotations.Optional;
+import org.apache.sling.models.annotations.injectorspecific.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.PostConstruct;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@Model(adaptables = SlingHttpServletRequest.class, resourceType = ContentFragmentModelImpl.RESOURCE_TYPE)
+public class ContentFragmentModel {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ContentFragmentModelImpl.class);
+    public static final String RESOURCE_TYPE = "/components/content/contentfragment";
+
+    private static final String CF_DISPLAY_MODE = "displayMode";
+    private static final String CF_ELEMENTS = "elementNames";
+    private static final String CF_MULTI_DISPLAY_MODE = "multi";
+    private static final String CF_MULTI_SINGLE_TEXT_MODE = "singleText";
+
+
+    @ScriptVariable
+    private Resource resource;
+
+    @ValueMapValue
+    @Optional
+    @Default(values=StringUtils.EMPTY)
+    private String fragmentPath;
+
+    @ValueMapValue
+    @Optional
+    private String[] elementNames;
+
+    @ValueMapValue
+    @Optional
+    @Default(values=StringUtils.EMPTY)
+    private String displayMode;
+
+    @OSGiService
+    private ResourceResolverFactory resolverFactory;
+
+    ArrayList<String> elementsList = new ArrayList<String>();
+
+    private String language;
+
+
+    @PostConstruct
+    private void initModel() {
+        LOGGER.info("model lo ki vachindi ");
+        LOGGER.info("pathu enti ante "+ fragmentPath);
+        Pattern pattern = Pattern.compile("par(\\d+)");
+        Matcher matcher = pattern.matcher(Objects.requireNonNull(resource.getParent()).getPath());
+        if(StringUtils.isNotEmpty(fragmentPath) && !matcher.matches()) {
+            LOGGER.info("lopalaki vachindi "+ fragmentPath);
+            try(ResourceResolver resourceResolver = resolverFactory.getServiceResourceResolver(Collections.singletonMap(
+                    ResourceResolverFactory.SUBSERVICE, ServiceUserConstants.ADMINISTRATIVE_SERVICE_USER))) {
+                LOGGER.info("resource dorikindi  ");
+                Resource contentFragmentResource = resourceResolver.resolve(fragmentPath);
+                java.util.Optional<ContentFragment> cfModel = java.util.Optional.ofNullable(contentFragmentResource.adaptTo(ContentFragment.class));
+                Iterator<ContentElement> cfElements = cfModel.get().getElements();
+                language ="en";
+                for (Iterator<ContentElement> it = cfElements; it.hasNext(); ) {
+                    ContentElement cfElement = it.next();
+                    String cfElementName = cfElement.getName();
+                    LOGGER.info(language.equalsIgnoreCase("en")+" is English? "+ " Language is "+ language +" "+cfElementName.contains("english") +"  Vachindi andi vayyari "+cfElementName);
+                    if(language.equalsIgnoreCase("en") && cfElementName.contains("english")) {
+                        LOGGER.info("Came inside english");
+                        elementsList.add(cfElementName);
+                    } else if(language.equalsIgnoreCase("es") && cfElementName.contains("spanish") ) {
+                        LOGGER.info("Came inside spanish");
+                        elementsList.add(cfElementName);
+                    }
+
+                    LOGGER.info("element vache sariki chepave nee peru "+ cfElement.getName());
+                }
+                Resource articleResource = resourceResolver.resolve(resource.getPath());
+
+                ModifiableValueMap map = articleResource.adaptTo(ModifiableValueMap.class);
+                LOGGER.info("Values is elements a ga "+ elementsList.toArray());
+                for(String element : elementsList){
+                    LOGGER.info("element added "+ element);
+                }
+
+                if(elementNames == null) {
+                    LOGGER.info("elements are empty ");
+                    map.put(CF_ELEMENTS, elementsList.toArray());
+                }
+
+                if(elementsList.size() == 1) {
+                    map.remove(CF_DISPLAY_MODE);
+                    map.put(CF_DISPLAY_MODE, CF_MULTI_SINGLE_TEXT_MODE);
+                } else if(elementsList.size() !=0){
+                    map.remove(CF_DISPLAY_MODE);
+                    map.put(CF_DISPLAY_MODE, CF_MULTI_DISPLAY_MODE);
+                }
+                commitChanges(resourceResolver);
+            } catch (LoginException e) {
+                LOGGER.error("Resolver Exception {}", e.getMessage());
+            }
+
+        }
+    }
+
+    private void commitChanges(ResourceResolver resourceResolver) {
+        if(resourceResolver.hasChanges()) {
+            try {
+                resourceResolver.commit();
+            } catch (PersistenceException e) {
+                LOGGER.error("Unable save the cahnges {}",e.getMessage());
+            }
+        }
+    }
+}
