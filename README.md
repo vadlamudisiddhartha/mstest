@@ -1,0 +1,3 @@
+We need to create new component for this with pathfield in dialog. We need to read the path field in backend slingmodel and we need to display content. To manual override we have two options
+1)	We can have a utility page where we can map what language should be picked up if the language content is empty. For example If we don’t have content for French and we want to show English we need to map fr and en
+2)	We can have new content fragment page where we can map what language should be picked up if the language content is empty. For example If we don’t have content for French and we want to show English we need to map fr and en. Like fr=en,de=en like that.
