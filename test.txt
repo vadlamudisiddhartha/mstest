@@ -1,1 +1,17 @@
-.
+1) Create a Scheduler 
+2) Picks only activated pages
+3) Edited time should be lesser than activated page
+4) Recursive function of pages match with the content fragment 
+5) created a map with the matched page and content fragments
+6) once map is created we will use that map and get all the data from the content fragment 
+7) sort the data and create a map with page and content fragment data
+8) add the content fragment data to the page in a property 
+
+Page component:
+1) Read the newly added property in the content fragment html and display on the page
+2) add the content fragment html to the body.html of the page
+
+Note:
+1) For bold not sure how can we achieve it need to check it.
+2) We can schedule this scheduler for a day or a week as per our wish
+3) In this way it won't hit the disclosures library.
